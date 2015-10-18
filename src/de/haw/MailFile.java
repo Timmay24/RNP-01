@@ -2,12 +2,22 @@ package de.haw;
 
 import de.haw.util.EMail;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.Properties;
 import java.util.Scanner;
 
@@ -45,11 +55,10 @@ public class MailFile {
         try {
             clientOutputStream = clientSocket.getOutputStream();
             clientInputStream = clientSocket.getInputStream();
-            clientOutputStream.write(("EHLO " + prop.getProperty("smtp")).getBytes());
-            String inputStreamString = new Scanner(clientInputStream,"UTF-8").useDelimiter("\\A").next();
-            System.out.println(inputStreamString);
-            System.out.println("test");
-
+            PrintWriter output = new PrintWriter(clientOutputStream, false);
+            output.print("EHLO " + prop.getProperty("smtp"));
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientInputStream));
+            System.out.println(in.readLine());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -96,7 +105,7 @@ public class MailFile {
         Socket clientSocket = null;
 
         if (prop.getProperty("ssl").equals("True")) {
-            SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+            SSLSocketFactory factory = (SSLSocketFactory) getSocketFactory();
             try {
                 SSLSocket sslSocket = (SSLSocket)factory.createSocket(prop.getProperty("smtp"), Integer.valueOf(prop.getProperty("port")));
                 clientSocket = sslSocket;
@@ -111,5 +120,32 @@ public class MailFile {
             }
         }
         return clientSocket;
+    }
+    
+    private static SSLSocketFactory sslSocketFactory;
+
+    /**
+     * Returns a SSL Factory instance that accepts all server certificates.
+     * <pre>SSLSocket sock =
+     *     (SSLSocket) getSocketFactory.createSocket ( host, 443 ); </pre>
+     * @return  An SSL-specific socket factory. 
+     **/
+    public static final SSLSocketFactory getSocketFactory()
+    {
+      if ( sslSocketFactory == null ) {
+        try {
+          TrustManager[] tm = new TrustManager[] { new NaiveTrustManager() };
+          SSLContext context = SSLContext.getInstance ("SSL");
+          context.init( new KeyManager[0], tm, new SecureRandom( ) );
+
+          sslSocketFactory = (SSLSocketFactory) context.getSocketFactory ();
+
+        } catch (KeyManagementException e) {
+        	
+        } catch (NoSuchAlgorithmException e) {
+        	
+        }
+      }
+      return sslSocketFactory;
     }
 }
