@@ -1,34 +1,33 @@
 package de.haw;
 
 import de.haw.util.EMail;
+import de.haw.util.base64.Base64;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.PrintWriter;
+import javax.net.ssl.*;
+import java.io.*;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Properties;
-import java.util.Scanner;
 
 public class MailFile {
 
     private final Properties prop;
+    private String recipient;
+    private String sender;
+    private String attachmentPath;
 
     public MailFile(String recipient, String attachmentPath) {
         prop = loadProperties();
         EMail recipientAddress = new EMail(recipient);
+        this.recipient = recipient;
         EMail senderAddress = new EMail(prop.getProperty("sender"));
+        this.sender = prop.getProperty("sender");
+        this.attachmentPath = attachmentPath;
     }
 
     private Properties loadProperties() {
@@ -52,51 +51,87 @@ public class MailFile {
         Socket clientSocket = openSocket();
         OutputStream clientOutputStream = null;
         InputStream clientInputStream = null;
+
         try {
             clientOutputStream = clientSocket.getOutputStream();
             clientInputStream = clientSocket.getInputStream();
             PrintWriter output = new PrintWriter(clientOutputStream, false);
-            output.print("EHLO " + prop.getProperty("smtp"));
             BufferedReader in = new BufferedReader(new InputStreamReader(clientInputStream));
+
+            // get first response
             System.out.println(in.readLine());
+
+            // negotiate sec standards
+            output.println("EHLO " + prop.getProperty("smtp").substring(prop.getProperty("smtp").indexOf('.') + 1));
+            output.flush();
+
+            // TODO beautify dat shit
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+
+            // encode login credentials
+            String encodedUser = new String(Base64.encodeBytesToBytes(prop.getProperty("user").getBytes()));
+            String encodedPassword = new String(Base64.encodeBytesToBytes(prop.getProperty("password").getBytes()));
+
+            // authenticate
+            output.println("AUTH LOGIN");
+            output.flush();
+            System.out.println(in.readLine());
+
+            output.println(encodedUser);
+            output.flush();
+            System.out.println(in.readLine());
+
+            output.println(encodedPassword);
+            output.flush();
+            System.out.println(in.readLine());
+
+            // declare sender
+            output.println("MAIL FROM: " + sender);
+
+            // declare recipient
+            output.println("RCPT TO: " + recipient);
+            output.flush();
+            System.out.println(in.readLine());
+            System.out.println(in.readLine());
+
+
+            // assemble header and body
+            output.println("DATA");
+            output.flush();
+            System.out.println(in.readLine());
+
+            // set subject
+            output.println("Subject: " + prop.getProperty("subject"));
+
+            // set mime stuff
+            output.println("MIME-Version: 1.0");
+            output.println("Content-Transfer-Encoding: base64");
+            output.println("Content-Type: image/png");
+            output.println("Content-Disposition: attachment; filename=" + new File(attachmentPath).getName());
+
+            // put in encoded attachment string
+            Path path = Paths.get(attachmentPath);
+            byte[] data = Files.readAllBytes(path);
+            String attachmentEncoded = new String(Base64.encodeBytesToBytes(data));
+            output.println(attachmentEncoded);
+
+            // end data block
+            output.println(".");
+            output.flush();
+            System.out.println(in.readLine());
+
+
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-//        authenticate();
-//        mailFrom();
-//        rcptTo();
-//        data();
-//        quit();
-
-        /**
-            S: 220 hamburger.edu
-            C: EHLO crepes.fr
-            S: 250 Hello crepes.fr, pleased to meet you
-            C: MAIL FROM: <alice@crepes.fr>
-            S: 250 alice@crepes.fr... Sender ok
-            C: RCPT TO: <bob@hamburger.edu>
-            S: 250 bob@hamburger.edu ... Recipient ok
-            C: DATA
-            S: 354 Enter mail,end with "." on a line by itself
-            C: Do you like ketchup?
-            C: How about pickles?
-                    C: .
-            S: 250 Message accepted for delivery
-            C: QUIT
-            S: 221 hamburger.edu closing connection
-        */
-
-//        C: EHLO jgm.example.com
-//        S: 250-smtp.example.com
-//        S: 250 AUTH CRAM-MD5 DIGEST-MD5
-//        C: AUTH FOOBAR
-//        S: 504 Unrecognized authentication type.
-//                C: AUTH CRAM-MD5
-//        S: 334
-//        PENCeUxFREJoU0NnbmhNWitOMjNGNndAZWx3b29kLmlubm9zb2Z0LmNvbT4=
-//                C: ZnJlZCA5ZTk1YWVlMDljNDBhZjJiODRhMGMyYjNiYmFlNzg2ZQ==
-//                S: 235 Authentication successful.
 
         return false;
     }
