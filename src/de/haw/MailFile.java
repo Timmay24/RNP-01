@@ -20,6 +20,7 @@ public class MailFile {
     private String recipient;
     private String sender;
     private String attachmentPath;
+    private final String BOUNDARY = "fu";
 
     public MailFile(String recipient, String attachmentPath) {
         prop = loadProperties();
@@ -111,17 +112,29 @@ public class MailFile {
             // set subject
             output.println("Subject: " + prop.getProperty("subject"));
 
-            // set mime stuff
+            // set mime preferences
             output.println("MIME-Version: 1.0");
+            output.println("Content-Type: multipart/mixed; boundary=" + BOUNDARY);
+
+            // mime settings for text body + content
+            output.println("--" + BOUNDARY);
+            output.println("Content-Transfer-Encoding: quoted-printable");
+            output.println("Content-Type: text/plain");
+            output.println();
+            output.println(prop.getProperty("body"));
+
+            // mime settings for attachment body + content
+            output.println("--" + BOUNDARY);
             output.println("Content-Transfer-Encoding: base64");
             output.println("Content-Type: image/png");
             output.println("Content-Disposition: attachment; filename=" + new File(attachmentPath).getName());
-
+            output.println();
             // put in encoded attachment string
             Path path = Paths.get(attachmentPath);
             byte[] data = Files.readAllBytes(path);
             String attachmentEncoded = new String(Base64.encodeBytesToBytes(data));
             output.println(attachmentEncoded);
+            output.println("--" + BOUNDARY + "--");
 
             // end data block
             output.println(".");
