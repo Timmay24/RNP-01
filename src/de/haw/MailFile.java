@@ -170,7 +170,9 @@ public class MailFile {
 
 	private String getFirstResponse(String log, LinkedBlockingQueue<String> serverMessages)
 			throws InterruptedException {
-		log += serverMessages.poll(1, TimeUnit.SECONDS);
+		String answer = serverMessages.poll(1, TimeUnit.SECONDS);
+		log += SERVER_LOG_PREFIX + answer;
+		checkResponseCode(answer, "220");
 		return log;
 	}
     
