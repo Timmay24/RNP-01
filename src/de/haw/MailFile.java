@@ -2,9 +2,7 @@ package de.haw;
 
 import de.haw.util.EMail;
 import de.haw.util.base64.Base64;
-import jdk.internal.org.objectweb.asm.util.CheckFieldAdapter;
 
-import javax.management.RuntimeErrorException;
 import javax.net.ssl.*;
 import java.io.*;
 import java.net.Socket;
@@ -14,7 +12,6 @@ import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -32,9 +29,9 @@ public class MailFile {
 
     public MailFile(String recipient, String attachmentPath) {
         prop = loadProperties();
-        EMail recipientAddress = new EMail(recipient);
+        new EMail(recipient);
         this.recipient = recipient;
-        EMail senderAddress = new EMail(prop.getProperty("sender"));
+        new EMail(prop.getProperty("sender"));
         this.sender = prop.getProperty("sender");
         this.attachmentPath = attachmentPath;
     }
@@ -66,7 +63,7 @@ public class MailFile {
             clientOutputStream = clientSocket.getOutputStream();
             clientInputStream = clientSocket.getInputStream();
             PrintWriter outputWriter = new PrintWriter(clientOutputStream, false);
-            LinkedBlockingQueue<String> serverMessages = new LinkedBlockingQueue<String>();
+            LinkedBlockingQueue<String> serverMessages = new LinkedBlockingQueue<>();
 			listener = new Listener(serverMessages, clientInputStream);
 			listener.start();
 
@@ -104,10 +101,8 @@ public class MailFile {
 
 		log = sendMessageWithResponseCodeCheck(log, outputWriter, serverMessages, "RCPT TO: " + recipient, "250");
 
-
 		// assemble header and body
 		log = sendMessageWithResponseCodeCheck(log, outputWriter, serverMessages, "DATA", "354");
-
 
 		// set subject
 		outputWriter.println("Subject: " + prop.getProperty("subject"));
@@ -169,7 +164,7 @@ public class MailFile {
 
 	private void checkResponseCode(String actualMessage, String expectedCode) {
 		if (null == actualMessage || !actualMessage.startsWith(expectedCode)) {
-			throw new RuntimeException("Execution failed, awnser from server was:\n" + actualMessage);
+			throw new RuntimeException("Execution failed, answer from server was:\n" + actualMessage);
 		}
 	}
 
@@ -183,9 +178,9 @@ public class MailFile {
     	return readLinesFrom(serverMessages, 700, 3);
     }
 
-	private String readLinesFrom(LinkedBlockingQueue<String> serverMessages, int timeout, int anountOfLines) throws InterruptedException {
+	private String readLinesFrom(LinkedBlockingQueue<String> serverMessages, int timeout, int amountOfLines) throws InterruptedException {
 		String lines = "";
-		for (int i = 0; i < anountOfLines; i++) {
+		for (int i = 0; i < amountOfLines; i++) {
 			String message = serverMessages.poll(timeout, TimeUnit.MILLISECONDS);
 			if (null != message) {
 				lines += message + "\n";
@@ -235,22 +230,21 @@ public class MailFile {
      *     (SSLSocket) getSocketFactory.createSocket ( host, 443 ); </pre>
      * @return  An SSL-specific socket factory. 
      **/
-    public static final SSLSocketFactory getSocketFactory()
-    {
-      if ( sslSocketFactory == null ) {
-        try {
-          TrustManager[] tm = new TrustManager[] { new NaiveTrustManager() };
-          SSLContext context = SSLContext.getInstance ("SSL");
-          context.init( new KeyManager[0], tm, new SecureRandom( ) );
+    public static final SSLSocketFactory getSocketFactory() {
+		if (sslSocketFactory == null) {
+            try {
+                TrustManager[] tm = new TrustManager[] { new NaiveTrustManager() };
+                SSLContext context = SSLContext.getInstance ("SSL");
+                context.init( new KeyManager[0], tm, new SecureRandom( ) );
 
-          sslSocketFactory = (SSLSocketFactory) context.getSocketFactory ();
+                sslSocketFactory = (SSLSocketFactory) context.getSocketFactory ();
 
-        } catch (KeyManagementException e) {
+            } catch (KeyManagementException e) {
         	
-        } catch (NoSuchAlgorithmException e) {
+            } catch (NoSuchAlgorithmException e) {
         	
+            }
         }
-      }
-      return sslSocketFactory;
+        return sslSocketFactory;
     }
 }
