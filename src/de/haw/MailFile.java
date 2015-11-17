@@ -13,6 +13,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -25,7 +26,7 @@ public class MailFile {
     private String recipient;
     private String sender;
     private String attachmentPath;
-    private final String BOUNDARY = "fu";
+    private final String BOUNDARY = UUID.randomUUID().toString();
 
     public MailFile(String recipient, String attachmentPath) {
         prop = loadProperties();
@@ -116,7 +117,7 @@ public class MailFile {
 		outputWriter.println("Content-Transfer-Encoding: quoted-printable");
 		outputWriter.println("Content-Type: text/plain");
 		outputWriter.println();
-		outputWriter.println(prop.getProperty("body").replace("\n.\n", "\n..\n"));
+		outputWriter.println(prop.getProperty("body").replace("\n.", "\n.."));
 
 		// mime settings for attachment body + content
 		outputWriter.println("--" + BOUNDARY);

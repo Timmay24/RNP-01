@@ -6,9 +6,11 @@ import java.nio.file.Paths;
 public class Main {
 
     public static void main(String[] args) {
-        Path currentRelativePath = Paths.get("");
-        String s = currentRelativePath.toAbsolutePath().toString();
-        if (args.length == 2 && !args[0].isEmpty() && !args[1].isEmpty()) {
+        if (args.length == 1 && args[0].equals("--help")) {
+            System.out.println("Usage: MailFile.jar <recipient mail address> <attachment>");
+        } else if (args.length == 2 && !args[0].isEmpty() && !args[1].isEmpty()) {
+            Path currentRelativePath = Paths.get("");
+            String s = currentRelativePath.toAbsolutePath().toString();
             MailFile mf = new MailFile(args[0], args[1]);
             mf.sendMail();
 //            MailFile mf = new MailFile("fabian.pfaff@haw-hamburg.de", s + "/docker.png");
